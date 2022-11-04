@@ -21,7 +21,7 @@ async function searchAllTask(sqlImpl) {
 
 function updateTime(sqlImpl, id) {
   const modSql = "UPDATE inter_task SET update_time = ? WHERE id = ?";
-  const params = [new Date().toISOString, id];
+  const params = [new Date().toISOString(), id];
   sqlImpl.query(modSql, params, (err, result) => {
     if (err) {
       Logger.log(err);
