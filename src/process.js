@@ -60,7 +60,7 @@ function useTask(data) {
             Sql.updateTime(mysqlImpl, id);
             // 默认一天时间
             await redisImpl.set(id, url, "EX", 60 * 60 * 24);
-            Logger.log("=====================end ==============");
+            Logger.log("=====================end===============");
           });
           // });
         }
