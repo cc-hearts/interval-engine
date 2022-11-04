@@ -25,7 +25,6 @@ function updateTime(sqlImpl, id) {
   sqlImpl.query(modSql, params, (err, result) => {
     if (err) {
       Logger.log(err);
-      reject(err);
       return;
     }
     Logger.log("UPDATE affectedRows", result.affectedRows);

@@ -23,17 +23,20 @@ async function initTask() {
   Logger.log(data);
   const mysqlImpl = Config.connectMysqlServer(data.mysql);
 
-  return { mysqlImpl };
+  // 连接redis数据
+  const redisImpl = Config.connectRedisServer(data.redis);
+
+  return { mysqlImpl, redisImpl };
 }
 
 let interTask;
 // 副作用的任务
 function useTask(data) {
-  const { mysqlImpl } = data;
+  const { mysqlImpl, redisImpl } = data;
   interTask = async () => {
     // 轮询需要做的操作:
     const arr = await Sql.searchAllTask(mysqlImpl);
-    arr.forEach((acc) => {
+    arr.forEach(async (acc) => {
       let { method, url, cookie, params, inter_time, id, update_time } = acc;
       const headers = {};
       if (cookie) {
@@ -41,19 +44,25 @@ function useTask(data) {
       }
       try {
         params = JSON.parse(params);
-        const originDate = Shard.formatHoursAndMinutes(inter_time);
+        // const originDate = Shard.formatHoursAndMinutes(inter_time);
+        const idVal = await redisImpl.get(id);
+        Logger.log("redis id:", id, "redis data:", idVal);
         if (
-          Shard.compareHourAndMinutes(originDate) &&
-          !Shard.compareISODate(update_time)
+          !idVal
+          // Shard.compareHourAndMinutes(originDate) &&
+          // !Shard.compareISODate(update_time)
         ) {
-          Interval.addTask(id, () => {
-            Logger.log("===============task start==============");
-            Logger.log("inter_time", originDate);
-            Logger.log("update_time", update_time);
-            Fetch.request(url, method, params, headers).then(() => {
-              Sql.updateTime(id);
-            });
+          // Interval.addTask(id, () => {
+          Logger.log("===============task start==============");
+          // Logger.log("inter_time", originDate);
+          // Logger.log("update_time", update_time);
+          Fetch.request(url, method, params, headers).then(async () => {
+            Sql.updateTime(mysqlImpl, id);
+            // 默认一天时间
+            await redisImpl.set(id, url, "EX", 60 * 60 * 24);
+            Logger.log("=====================end ==============");
           });
+          // });
         }
       } catch (e) {
         Logger.log("jsonParser error:", e);
@@ -67,7 +76,7 @@ function useTask(data) {
 // 结束的任务
 function endTask() {
   Config.closeMysqlServer();
-  Interval.removeInterval(interTask);
+  // Interval.removeInterval(interTask);
 }
 
 async function bootstrap() {
